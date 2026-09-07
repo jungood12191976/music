@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ジェネレーティブミュージック</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --text: #f0f0f2;
+    --text-secondary: #9a9ba3;
+    --border: #2a2d36;
+    --accent: #7f77dd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Hiragino Sans", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1.25rem;
+  }
+  h1 { font-size: 18px; font-weight: 500; margin: 0 0 0.5rem; }
+  .subtitle { font-size: 12px; color: var(--text-secondary); margin: 0 0 1.5rem; text-align: center; }
+  .suggest {
+    width: 100%; max-width: 360px;
+    background: #1e2230; border: 0.5px solid var(--accent);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 1.25rem;
+    font-size: 12px; line-height: 1.6; color: var(--text-secondary);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .suggest b { color: var(--text); font-size: 13px; }
+  .suggest button {
+    align-self: flex-start; font-size: 12px; padding: 6px 12px;
+    border-radius: 8px; border: 0.5px solid var(--border);
+    background: var(--card); color: var(--text); cursor: pointer;
+  }
+  .tabs {
+    display: flex; gap: 6px; margin-bottom: 1.5rem; width: 100%; max-width: 360px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    flex: 1; min-width: 70px; padding: 9px 4px; border-radius: 10px;
+    border: 0.5px solid var(--border); background: var(--card);
+    color: var(--text-secondary); font-size: 12px; text-align: center; cursor: pointer;
+  }
+  .tab.active { border-color: var(--accent); color: var(--text); background: #24222f; }
+  .panel { display: none; width: 100%; max-width: 360px; }
+  .panel.active { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+  .mode-desc { font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.6; margin: 0; }
+  button.play {
+    width: 72px; height: 72px; border-radius: 50%; border: 0.5px solid var(--border);
+    background: var(--card); color: var(--text);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  button.play:active { transform: scale(0.96); }
+  .status { font-size: 13px; color: var(--text-secondary); margin: 0; text-align: center; }
+  .control-row { display: flex; align-items: center; gap: 12px; width: 100%; }
+  .control-row label { font-size: 13px; color: var(--text-secondary); width: 68px; flex-shrink: 0; }
+  input[type="range"] { flex: 1; }
+  .nature-toggle {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding-top: 8px; border-top: 0.5px solid var(--border); margin-top: 4px;
+  }
+  .nature-toggle label { font-size: 13px; color: var(--text-secondary); flex: 1; }
+  svg { width: 24px; height: 24px; }
+  .switch {
+    width: 40px; height: 22px; border-radius: 11px; background: var(--border);
+    position: relative; cursor: pointer; flex-shrink: 0;
+  }
+  .switch.on { background: var(--accent); }
+  .switch .knob {
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    position: absolute; top: 2px; left: 2px; transition: left 0.15s;
+  }
+  .switch.on .knob { left: 20px; }
+</style>
+</head>
+<body>
+<h1>ジェネレーティブミュージック</h1>
+<p class="subtitle">二度と同じパターンにならない、時間帯に合わせた生成音楽</p>
+
+<div class="suggest" id="suggest-box">
+  <b id="suggest-title">今の時間のおすすめ</b>
+  <span id="suggest-text"></span>
+  <button id="suggest-btn">このモードに切り替える</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-panel="focus">集中(午前)</div>
+  <div class="tab" data-panel="boost">底上げ(午後)</div>
+  <div class="tab" data-panel="ambient">通常</div>
+  <div class="tab" data-panel="night">夜/睡眠</div>
+</div>
+
+<div class="panel active" id="panel-focus">
+  <p class="mode-desc">規則的な低い鼓動と穏やかな旅メロディで、集中を持続させるモード。体内時計を整えるタイプに合わせて設計。</p>
+  <button class="play" data-mode="focus"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+  <p class="status" id="status-focus">タップして再生</p>
+  <div class="control-row">
+    <label>賑やかさ</label>
+    <input type="range" id="focus-busy" min="1" max="10" value="3" step="1">
+  </div>
+  <div class="nature-toggle">
+    <label>自然音(風)を重ねる</label>
+    <div class="switch" id="nature-focus"><div class="knob"></div></div>
+  </div>
+</div>
+
+<div class="panel" id="panel-boost">
+  <p class="mode-desc">15〜18時の底上げ用。予測できない展開で新しい刺激を求めるタイプに合わせた、一番賑やかなモード。</p>
+  <button class="play" data-mode="boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+  <p class="status" id="status-boost">タップして再生</p>
+  <div class="control-row">
+    <label>BPM</label>
+    <input type="range" id="boost-bpm" min="115" max="132" value="126" step="1">
+    <span id="boost-bpm-out" style="font-size:13px;min-width:32px;">126</span>
+  </div>
+  <div class="control-row">
+    <label>賑やかさ</label>
+    <input type="range" id="boost-busy" min="1" max="10" value="7" step="1">
+  </div>
+</div>
+
+<div class="panel" id="panel-ambient">
+  <p class="mode-desc">昼間や作業中に流しっぱなしにできる、標準のアンビエントモード。</p>
+  <button class="play" data-mode="ambient"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+  <p class="status" id="status-ambient">タップして再生</p>
+  <div class="control-row">
+    <label>密度</label>
+    <input type="range" id="ambient-density" min="1" max="10" value="4" step="1">
+  </div>
+  <div class="control-row">
+    <label>音の高さ</label>
+    <input type="range" id="ambient-register" min="1" max="10" value="5" step="1">
+  </div>
+</div>
+
+<div class="panel" id="panel-night">
+  <p class="mode-desc">21時以降向け。低い持続音でGABA系をサポートし、徐々に音数が減っていく睡眠導入モード。</p>
+  <button class="play" data-mode="night"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+  <p class="status" id="status-night">タップして再生</p>
+  <div class="control-row">
+    <label>静けさ</label>
+    <input type="range" id="night-calm" min="1" max="10" value="6" step="1">
+  </div>
+  <div class="nature-toggle">
+    <label>自然音(波)を重ねる</label>
+    <div class="switch" id="nature-night"><div class="knob"></div></div>
+  </div>
+</div>
+
+<script>
+const PLAY_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const PAUSE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+
+/* ---------- TIME-BASED SUGGESTION ---------- */
+function suggestMode(){
+  const h = new Date().getHours();
+  let mode, label, text;
+  if (h >= 6 && h < 15){ mode='focus'; label='集中モード'; text='午前中は規則的なリズムで集中を支えます。'; }
+  else if (h >= 15 && h < 18){ mode='boost'; label='底上げモード'; text='15〜18時の中だるみタイムを、賑やかな展開で乗り切ります。'; }
+  else if (h >= 18 && h < 21){ mode='ambient'; label='通常モード'; text='夕方は落ち着いたアンビエントで切り替えを。'; }
+  else { mode='night'; label='夜/睡眠モード'; text='21時以降はGABA系をサポートする低音モードへ。'; }
+  document.getElementById('suggest-text').textContent = label + '：' + text;
+  document.getElementById('suggest-btn').dataset.target = mode;
+}
+suggestMode();
+document.getElementById('suggest-btn').addEventListener('click', (e) => {
+  const target = e.target.dataset.target;
+  document.querySelector('.tab[data-panel="' + target + '"]').click();
+});
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+  });
+});
+
+let ctx;
+function getCtx(){
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ctx.resume();
+  return ctx;
+}
+
+/* ---------- NATURE SOUND LAYER ---------- */
+let natureNodes = {};
+function startNature(key, type){
+  const c = getCtx();
+  const bufSize = c.sampleRate * 2;
+  const buf = c.createBuffer(1, bufSize, c.sampleRate);
+  const d = buf.getChannelData(0);
+  let lastOut = 0;
+  for (let i=0;i<bufSize;i++){
+    const white = Math.random()*2-1;
+    lastOut = (lastOut + 0.02*white) / 1.02;
+    d[i] = lastOut * 3.5;
+  }
+  const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+  const filt = c.createBiquadFilter();
+  filt.type = type === 'wave' ? 'lowpass' : 'bandpass';
+  filt.frequency.value = type === 'wave' ? 500 : 2000;
+  const g = c.createGain(); g.gain.value = 0;
+  src.connect(filt); filt.connect(g); g.connect(c.destination);
+  src.start();
+  if (type === 'wave'){
+    const lfo = c.createOscillator(); const lfoGain = c.createGain();
+    lfo.frequency.value = 0.08; lfoGain.gain.value = 0.04;
+    lfo.connect(lfoGain); lfoGain.connect(g.gain); lfo.start();
+    g.gain.value = 0.06;
+    natureNodes[key] = {src, g, lfo};
+  } else {
+    g.gain.linearRampToValueAtTime(0.03, c.currentTime+2);
+    natureNodes[key] = {src, g};
+  }
+}
+function stopNature(key){
+  const n = natureNodes[key];
+  if (!n) return;
+  const c = getCtx();
+  n.g.gain.linearRampToValueAtTime(0, c.currentTime+1.5);
+  n.src.stop(c.currentTime+1.6);
+  if (n.lfo) n.lfo.stop(c.currentTime+1.6);
+  delete natureNodes[key];
+}
+function wireNatureSwitch(id, key, type, isPlayingRef){
+  const el = document.getElementById(id);
+  el.addEventListener('click', () => {
+    el.classList.toggle('on');
+    if (el.classList.contains('on')){
+      getCtx();
+      startNature(key, type);
+    } else {
+      stopNature(key);
+    }
+  });
+}
+wireNatureSwitch('nature-focus', 'focus', 'wind');
+wireNatureSwitch('nature-night', 'night', 'wave');
+
+/* ---------- SHARED HELPERS ---------- */
+function bell(t, freq, dur, vol){
+  const c = getCtx(); const o = c.createOscillator(); const g = c.createGain();
+  o.type='sine'; o.frequency.value=freq;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t+dur*0.2); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.1);
+}
+function pulse(t, freq, dur, vol){
+  const c = getCtx(); const o = c.createOscillator(); const g = c.createGain();
+  o.type='sine'; o.frequency.value=freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.05);
+}
+
+/* ---------- FOCUS MODE (morning) ---------- */
+const focusScale = [0,2,4,7,9,12,14,16,19];
+const focusRoot = 261.6;
+let focusPlaying = false, focusTimer, focusBeat = 0;
+function focusFreq(semi){ return focusRoot * Math.pow(2, semi/12); }
+function focusSchedule(){
+  const c = getCtx();
+  const busy = +document.getElementById('focus-busy').value;
+  const t = c.currentTime;
+  if (focusBeat % 4 === 0) pulse(t, focusRoot/4, 0.4, 0.06);
+  if (Math.random() < 0.25 + busy*0.03){
+    const idx = Math.floor(Math.random()*focusScale.length);
+    bell(t, focusFreq(focusScale[idx]+12), 2+Math.random()*1.5, 0.05);
+  }
+  focusBeat++;
+  focusTimer = setTimeout(focusSchedule, 900);
+}
+
+/* ---------- BOOST MODE (afternoon, reuses house engine) ---------- */
+let boostPlaying = false, boostLookahead, boostNextStep = 0, boostStep = 0;
+const stepsPerBar = 16;
+document.getElementById('boost-bpm').addEventListener('input', e => document.getElementById('boost-bpm-out').textContent = e.target.value);
+function bKick(t){
+  const c = getCtx(); const o = c.createOscillator(); const g = c.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t+0.12);
+  g.gain.setValueAtTime(0.85, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.3);
+}
+function bHat(t, open){
+  const c = getCtx(); const b = c.createBufferSource(); const buf = c.createBuffer(1, c.sampleRate*0.05, c.sampleRate);
+  const d = buf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  b.buffer = buf;
+  const filt = c.createBiquadFilter(); filt.type='highpass'; filt.frequency.value=8000;
+  const g = c.createGain(); g.gain.setValueAtTime(open?0.15:0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t+(open?0.2:0.05));
+  b.connect(filt); filt.connect(g); g.connect(c.destination); b.start(t);
+}
+function bClap(t){
+  const c = getCtx(); const b = c.createBufferSource(); const buf = c.createBuffer(1, c.sampleRate*0.15, c.sampleRate);
+  const d = buf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  b.buffer = buf;
+  const filt = c.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=1500;
+  const g = c.createGain(); g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.15);
+  b.connect(filt); filt.connect(g); g.connect(c.destination); b.start(t);
+}
+function bBass(t, freq, dur){
+  const c = getCtx(); const o = c.createOscillator(); const g = c.createGain(); const f = c.createBiquadFilter();
+  o.type='sawtooth'; o.frequency.value=freq; f.type='lowpass'; f.frequency.value=400+Math.random()*300;
+  g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.2, t+0.02); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.connect(f); f.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.05);
+}
+function bStab(t, freqs, dur){
+  const c = getCtx();
+  freqs.forEach(fr => {
+    const o = c.createOscillator(); const g = c.createGain();
+    o.type='triangle'; o.frequency.value=fr;
+    g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.05, t+0.05); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.05);
+  });
+}
+function bLead(t, freq, dur, bright){
+  const c = getCtx(); const o = c.createOscillator(); const g = c.createGain();
+  o.type='square'; o.frequency.value=freq;
+  g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.02);
+  if (bright){
+    const o2 = c.createOscillator(); const g2 = c.createGain();
+    o2.type='sine'; o2.frequency.value=freq*2;
+    g2.gain.setValueAtTime(0.07, t); g2.gain.exponentialRampToValueAtTime(0.001, t+dur*0.6);
+    o2.connect(g2); g2.connect(c.destination); o2.start(t); o2.stop(t+dur+0.02);
+  }
+}
+const boostBassNotes = [110,110,146.8,123.5];
+const boostChords = [[220,261.6,329.6],[196,246.9,293.7],[220,277.2,329.6]];
+const boostLeadScale = [0,2,4,7,9,12,14,16,19];
+const boostLeadRoot = 440;
+function boostLeadFreq(semi){ return boostLeadRoot * Math.pow(2, semi/12); }
+function boostScheduleStep(t){
+  const busy = +document.getElementById('boost-busy').value;
+  const bar = Math.floor(boostStep/stepsPerBar);
+  const s = boostStep % stepsPerBar;
+  if (s%4===0) bKick(t);
+  if (s%4===2 && Math.random()<0.5+busy*0.03) bClap(t);
+  if (s%2===1 || Math.random()<0.15) bHat(t, s%8===7);
+  if (s===0) bBass(t, boostBassNotes[bar%boostBassNotes.length], 0.5);
+  if (s===8 && Math.random()<0.4+busy*0.05) bBass(t, boostBassNotes[(bar+1)%boostBassNotes.length]*1.5, 0.3);
+  if (s===0 && bar%2===0 && Math.random()<0.3+busy*0.05) bStab(t, boostChords[bar%boostChords.length], 1.2);
+  const leadChance = 0.2 + busy*0.05;
+  if (s%2===0 && Math.random()<leadChance){
+    const idx = Math.floor(Math.random()*boostLeadScale.length);
+    const dur = (Math.random()<0.3 ? 0.5 : 0.25);
+    bLead(t, boostLeadFreq(boostLeadScale[idx]), dur, Math.random()<0.3);
+  }
+  boostStep++;
+}
+function boostSchedulerLoop(){
+  const c = getCtx();
+  const bpm = +document.getElementById('boost-bpm').value;
+  const stepDur = 60/bpm/4;
+  while (boostNextStep < c.currentTime + 0.1){
+    boostScheduleStep(boostNextStep);
+    boostNextStep += stepDur;
+  }
+  boostLookahead = setTimeout(boostSchedulerLoop, 25);
+}
+
+/* ---------- AMBIENT MODE (standard) ---------- */
+const ambientScale = [0,2,3,7,9,12,14,15,19,21,24,26,27,31,33];
+const ambientBase = 220;
+let ambientPlaying = false, ambientTimer;
+function ambientFreq(semi){ return ambientBase * Math.pow(2, semi/12); }
+function ambientPlayNote(freq, dur, gain){
+  const c = getCtx();
+  const osc = c.createOscillator(); const g = c.createGain(); const filt = c.createBiquadFilter();
+  filt.type = 'lowpass'; filt.frequency.value = 1200 + Math.random()*800;
+  osc.type = ['sine','triangle'][Math.floor(Math.random()*2)];
+  osc.frequency.value = freq;
+  osc.connect(filt); filt.connect(g); g.connect(c.destination);
+  const now = c.currentTime;
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(gain, now + dur*0.3);
+  g.gain.linearRampToValueAtTime(0, now + dur);
+  osc.start(now); osc.stop(now + dur + 0.1);
+}
+function ambientSchedule(){
+  const density = +document.getElementById('ambient-density').value;
+  const register = +document.getElementById('ambient-register').value;
+  const idx = Math.floor(Math.random()*ambientScale.length);
+  const octaveShift = (register-5)*12;
+  const semi = ambientScale[idx] + octaveShift + (Math.random()<0.15 ? 12 : 0);
+  const freq = ambientFreq(semi);
+  const dur = 2 + Math.random()*3;
+  const gain = 0.05 + Math.random()*0.05;
+  ambientPlayNote(freq, dur, gain);
+  if (Math.random() < 0.3) ambientPlayNote(freq*1.5, dur*0.8, gain*0.6);
+  const gap = (2200 - density*180) + Math.random()*900;
+  ambientTimer = setTimeout(ambientSchedule, gap);
+}
+
+/* ---------- NIGHT MODE ---------- */
+const nightScale = [0,2,3,7,9,12,14,15,19];
+const nightRoot = 110;
+let nightPlaying = false, nightTimer, droneOsc, droneGain, droneLfo, nightStartTime;
+function nightFreq(semi){ return nightRoot * Math.pow(2, semi/12); }
+function startDrone(){
+  const c = getCtx();
+  droneOsc = c.createOscillator(); droneGain = c.createGain();
+  const filt = c.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=300;
+  droneOsc.type='sine'; droneOsc.frequency.value=nightRoot/2;
+  droneGain.gain.setValueAtTime(0, c.currentTime);
+  droneGain.gain.linearRampToValueAtTime(0.1, c.currentTime+3);
+  droneOsc.connect(filt); filt.connect(droneGain); droneGain.connect(c.destination);
+  droneOsc.start();
+  droneLfo = c.createOscillator(); const lfoGain = c.createGain();
+  droneLfo.frequency.value = 0.05; lfoGain.gain.value = 4;
+  droneLfo.connect(lfoGain); lfoGain.connect(droneOsc.frequency); droneLfo.start();
+}
+function stopDrone(){
+  const c = getCtx();
+  if (droneGain) droneGain.gain.linearRampToValueAtTime(0, c.currentTime+1.5);
+  if (droneOsc) droneOsc.stop(c.currentTime+1.6);
+  if (droneLfo) droneLfo.stop(c.currentTime+1.6);
+}
+function nightSchedule(){
+  const c = getCtx();
+  const calm = +document.getElementById('night-calm').value;
+  const minutesPlaying = (Date.now() - nightStartTime) / 60000;
+  const windDown = Math.min(minutesPlaying / 20, 1);
+  if (Math.random() < 0.55 * (1 - windDown*0.6)){
+    const idx = Math.floor(Math.random()*nightScale.length);
+    const oct = Math.random()<0.5 ? 12 : 24;
+    bell(c.currentTime, nightFreq(nightScale[idx]+oct), 3+Math.random()*2, 0.045*(1-windDown*0.4));
+  }
+  const gap = (1500 + calm*350 + windDown*1500) + Math.random()*2500;
+  nightTimer = setTimeout(nightSchedule, gap);
+}
+
+/* ---------- BUTTON WIRING ---------- */
+document.querySelectorAll('button.play').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.mode;
+    const status = document.getElementById('status-' + mode);
+    if (mode === 'focus'){
+      if (!focusPlaying){
+        getCtx(); focusPlaying = true; focusBeat = 0;
+        btn.innerHTML = PAUSE_ICON; status.textContent = '再生中';
+        focusSchedule();
+      } else { focusPlaying = false; clearTimeout(focusTimer); btn.innerHTML = PLAY_ICON; status.textContent = '一時停止中'; }
+    } else if (mode === 'boost'){
+      if (!boostPlaying){
+        getCtx(); boostPlaying = true; boostStep = 0; boostNextStep = ctx.currentTime + 0.05;
+        btn.innerHTML = PAUSE_ICON; status.textContent = '再生中';
+        boostSchedulerLoop();
+      } else { boostPlaying = false; clearTimeout(boostLookahead); btn.innerHTML = PLAY_ICON; status.textContent = '一時停止中'; }
+    } else if (mode === 'ambient'){
+      if (!ambientPlaying){
+        getCtx(); ambientPlaying = true;
+        btn.innerHTML = PAUSE_ICON; status.textContent = '再生中';
+        ambientSchedule();
+      } else { ambientPlaying = false; clearTimeout(ambientTimer); btn.innerHTML = PLAY_ICON; status.textContent = '一時停止中'; }
+    } else if (mode === 'night'){
+      if (!nightPlaying){
+        getCtx(); nightPlaying = true; nightStartTime = Date.now();
+        btn.innerHTML = PAUSE_ICON; status.textContent = '再生中、徐々に音数が減っていきます';
+        startDrone(); nightSchedule();
+      } else { nightPlaying = false; clearTimeout(nightTimer); stopDrone(); btn.innerHTML = PLAY_ICON; status.textContent = '一時停止中'; }
+    }
+  });
+});
+</script>
+</body>
+</html>
